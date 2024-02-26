@@ -1,29 +1,26 @@
+import uuid
 from datetime import datetime
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
 default_args = {
-    'owner': 'cookiescooker',
-    'start_date': datetime(2024, 2, 25, 11, 44)
+    'owner': 'airscholar',
+    'start_date': datetime(2023, 9, 3, 10, 00)
 }
 
-
-# Getting API from a website that generate random api for this
 def get_data():
     import requests
 
-    res = requests.get('https://randomuser.me/api/')
+    res = requests.get("https://randomuser.me/api/")
     res = res.json()
     res = res['results'][0]
-    # print(json.dumps(res, indent=3))
 
     return res
 
-
-# Format the data to make it more easy to use
 def format_data(res):
     data = {}
     location = res['location']
+    data['id'] = uuid.uuid4()
     data['first_name'] = res['name']['first']
     data['last_name'] = res['name']['last']
     data['gender'] = res['gender']
@@ -39,31 +36,33 @@ def format_data(res):
 
     return data
 
-
-
 def stream_data():
     import json
+    from kafka import KafkaProducer
+    import time
+    import logging
 
-    # Calling get_data function
-    res = get_data()
+    producer = KafkaProducer(bootstrap_servers=['broker:29092'], max_block_ms=5000)
+    curr_time = time.time()
 
-    # After got the data use foramt_data function to format it
-    res = format_data(res)
+    while True:
+        if time.time() > curr_time + 60: #1 minute
+            break
+        try:
+            res = get_data()
+            res = format_data(res)
 
-    print(json.dumps(res, indent=3))
-
-
+            producer.send('users_created', json.dumps(res).encode('utf-8'))
+        except Exception as e:
+            logging.error(f'An error occured: {e}')
+            continue
 
 with DAG('user_automation',
-        default_args=default_args,
-        schedule='@daily',
-        catchup=False 
-    ) as dag:
+         default_args=default_args,
+         schedule_interval='@daily',
+         catchup=False) as dag:
 
-    streaming_task = PythonOperator (
-        task_id='streaming_data_from_api',
+    streaming_task = PythonOperator(
+        task_id='stream_data_from_api',
         python_callable=stream_data
     )
-
-
-stream_data();
