@@ -17,6 +17,7 @@ def get_data():
 
     return res
 
+
 def format_data(res):
     data = {}
     location = res['location']
@@ -36,6 +37,7 @@ def format_data(res):
 
     return data
 
+
 def stream_data():
     import json
     from kafka import KafkaProducer
@@ -51,7 +53,7 @@ def stream_data():
         try:
             res = get_data()
             res = format_data(res)
-
+            print(res)
             producer.send('users_created', json.dumps(res).encode('utf-8'))
         except Exception as e:
             logging.error(f'An error occured: {e}')
