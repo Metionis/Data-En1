@@ -1,13 +1,16 @@
+# import libraries
 import uuid
 from datetime import datetime
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
+# setting the args
 default_args = {
     'owner': 'airscholar',
     'start_date': datetime(2023, 9, 3, 10, 00)
 }
 
+# getting data function
 def get_data():
     import requests
 
@@ -18,6 +21,7 @@ def get_data():
     return res
 
 
+# format the data
 def format_data(res):
     data = {}
     location = res['location']
@@ -37,7 +41,7 @@ def format_data(res):
 
     return data
 
-
+# data streaming
 def stream_data():
     import json
     from kafka import KafkaProducer
